@@ -4,7 +4,9 @@ import {
 import postcss from 'postcss';
 import path from 'path';
 import fs from 'fs';
-import convert from 'convert-source-map'
+import combine from 'combine-source-map';
+import convert from 'convert-source-map';
+import sourceMap from 'source-map';
 
 let _logSuccess = function(msg, title) {
   var date = new Date;
@@ -20,41 +22,70 @@ let changes = 0;
 function _postcss(styles, plugins, output, onDone) {
   _logSuccess('init');
   let r = "";
+
   let index = 0;
   let n = Object.keys(styles).length;
+  let filename = output.substring(output.lastIndexOf('/') + 1, output.length);
+  
+  let combinedSourceMap = combine.create(filename);
+  
   for (var file in styles) {
     postcss(plugins)
       .process(styles[file] || '', {
         from: file,
         to: file,
-	map: { inline: false}
+	map: { 
+            inline: false, 
+            annotation: false
+        }
       })
       .then(function(result) {
-        index += 1;        
-        r += result.css;
         
-        let sourcemap = convert.fromJSON(result.map).toJSON();
-        let sourcename = result.map['_file'];
-        let outputFolder = output.substring(0, output.lastIndexOf('/') + 1);
         
-        fs.writeFile(outputFolder + sourcename + '.map', sourcemap, function(err) {
-            if (err) {
-              return console.log(err);
-            } 
-        });
-        
-        if (index === n) {
-          fs.writeFile(output, r, function(err) {
-            if (err) {
-              return console.log(err);
-            } else {
-              fs.stat(output, function(err, stat) {
-                  _logSuccess(getSize(stat.size),'POSTCSS BUNDLE SIZE');
-                  onDone();
-              });
+        try {                
+            index += 1;        
+            r += result.css;    
+
+            let sourceContent = '';
+            for (let content in result.map['_sourcesContents']) {
+                let fileContent = result.map['_sourcesContents'][content]
+                sourceContent += fileContent;
+                sourceContent += '\n/' + '/# sourceMappingURL=data:application/json;base64,';
+                sourceContent += convert.fromJSON(result.map.toString()).toBase64();
             }
-          });
-          
+            
+            let sourceFileName = result.map['_file'];
+            combinedSourceMap.addFile({
+                sourceFile: sourceFileName, 
+                source: sourceContent
+            });
+            
+            if (index === n) {
+                let sourceMapBase64 = combinedSourceMap.base64();
+                let sourceMapStr = convert.fromBase64(sourceMapBase64).toJSON();
+
+                fs.writeFile(output + '.map', sourceMapStr, function(err) {
+                    if (err) {
+                    return console.log(err);
+                    }
+                });
+
+        
+                r += '\n/*# sourceMappingURL='+ filename +'.map */' ;
+                fs.writeFile(output, r, function(err) {
+                    if (err) {
+                    return console.log(err);
+                    } else {
+                    fs.stat(output, function(err, stat) {
+                        _logSuccess(getSize(stat.size),'POSTCSS BUNDLE SIZE');
+                        onDone();
+                    });
+                    }
+                });  
+            }                
+
+        } catch (err) {
+            console.log(err);
         }
       });
   }
