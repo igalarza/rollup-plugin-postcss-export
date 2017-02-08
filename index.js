@@ -36,7 +36,7 @@ function _postcss(styles, plugins, output, onDone) {
         r += result.css;
         var sourcemap = convert.fromJSON(result.map).toBase64();
         if (index === n) {
-          fs.writeFile(output + '.map', sourcemap, function(err) {
+	  r += '\n          fs.writeFile(output, r, function(err) {
             if (err) {
               return console.log(err);
             } else {
@@ -46,7 +46,7 @@ function _postcss(styles, plugins, output, onDone) {
               });
             }
           });
-          fs.writeFile(output + '.map', s, function(err) {
+          fs.writeFile(output + '.map', sourcemap, function(err) {
             if (err) {
               return console.log(err);
             } else {
