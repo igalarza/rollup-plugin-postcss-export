@@ -32,11 +32,23 @@ function _postcss(styles, plugins, output, onDone) {
 	map: { inline: false}
       })
       .then(function(result) {
-        index += 1;
+        index += 1;        
         r += result.css;
-        var sourcemap = convert.fromJSON(result.map).toBase64();
+        
+        var sourcemap = convert.fromJSON(result.map).toJSON();
+        var sourcename = result.map['_file'];
+        var outputFolder = output.substring(0, output.lastIndexOf('/') + 1);
+        
+        console.log(outputFolder + sourcename + '.map');
+        
+        fs.writeFile(outputFolder + sourcename + '.map', sourcemap, function(err) {
+            if (err) {
+              return console.log(err);
+            } 
+        });
+        
         if (index === n) {
-	  r += '\n          fs.writeFile(output, r, function(err) {
+          fs.writeFile(output, r, function(err) {
             if (err) {
               return console.log(err);
             } else {
@@ -46,12 +58,7 @@ function _postcss(styles, plugins, output, onDone) {
               });
             }
           });
-          fs.writeFile(output + '.map', sourcemap, function(err) {
-            if (err) {
-              return console.log(err);
-            } else {
-            }
-          });
+          
         }
       });
   }
