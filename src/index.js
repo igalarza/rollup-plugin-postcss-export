@@ -4,6 +4,7 @@ import {
 import postcss from 'postcss';
 import path from 'path';
 import fs from 'fs';
+import convert from 'convert-source-map'
 
 let _logSuccess = function(msg, title) {
   var date = new Date;
@@ -19,7 +20,6 @@ let changes = 0;
 function _postcss(styles, plugins, output, onDone) {
   _logSuccess('init');
   let r = "";
-  let s = "";
   let index = 0;
   let n = Object.keys(styles).length;
   for (var file in styles) {
@@ -32,9 +32,9 @@ function _postcss(styles, plugins, output, onDone) {
       .then(function(result) {
         index += 1;
         r += result.css;
-	s += result.map.mappings;
+        let sourcemap = convert.fromJSON(result.map).toBase64();
         if (index === n) {
-          fs.writeFile(output, r, function(err) {
+          fs.writeFile(output + '.map', sourcemap, function(err) {
             if (err) {
               return console.log(err);
             } else {

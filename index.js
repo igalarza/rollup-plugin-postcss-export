@@ -6,6 +6,7 @@ var rollupPluginutils = require('rollup-pluginutils');
 var postcss = _interopDefault(require('postcss'));
 var path = _interopDefault(require('path'));
 var fs = _interopDefault(require('fs'));
+var convert = _interopDefault(require('convert-source-map'));
 
 var _logSuccess = function(msg, title) {
   var date = new Date;
@@ -21,7 +22,6 @@ var changes = 0;
 function _postcss(styles, plugins, output, onDone) {
   _logSuccess('init');
   var r = "";
-  var s = "";
   var index = 0;
   var n = Object.keys(styles).length;
   for (var file in styles) {
@@ -34,9 +34,9 @@ function _postcss(styles, plugins, output, onDone) {
       .then(function(result) {
         index += 1;
         r += result.css;
-	s += result.map.mappings;
+        var sourcemap = convert.fromJSON(result.map).toBase64();
         if (index === n) {
-          fs.writeFile(output, r, function(err) {
+          fs.writeFile(output + '.map', sourcemap, function(err) {
             if (err) {
               return console.log(err);
             } else {
