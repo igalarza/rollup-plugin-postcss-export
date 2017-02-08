@@ -19,26 +19,35 @@ let changes = 0;
 function _postcss(styles, plugins, output, onDone) {
   _logSuccess('init');
   let r = "";
+  let s = "";
   let index = 0;
   let n = Object.keys(styles).length;
   for (var file in styles) {
     postcss(plugins)
       .process(styles[file] || '', {
         from: file,
-        to: file
+        to: file,
+	map: { inline: false}
       })
       .then(function(result) {
         index += 1;
         r += result.css;
+	s += result.map.mappings;
         if (index === n) {
           fs.writeFile(output, r, function(err) {
             if (err) {
               return console.log(err);
-            }else{
+            } else {
               fs.stat(output, function(err, stat) {
                   _logSuccess(getSize(stat.size),'POSTCSS BUNDLE SIZE');
                   onDone();
               });
+            }
+          });
+          fs.writeFile(output + '.map', s, function(err) {
+            if (err) {
+              return console.log(err);
+            } else {
             }
           });
         }
